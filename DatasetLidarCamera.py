@@ -24,7 +24,7 @@ from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
 
-from utils import invert_pose, rotate_forward, quaternion_from_matrix, read_calib_file
+from utils import invert_pose, rotate_forward, quaternion_from_matrix
 from pykitti import odometry
 import pykitti
 
@@ -50,8 +50,8 @@ class DatasetLidarCameraKittiOdometry(Dataset):
         self.suf = suf
 
         self.all_files = []
-        self.sequence_list = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10',
-                              '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21']
+        self.sequence_list = ['00']#, '01', '02', '03', '04', '05', '06', '07', '08', '09', '10',
+                            #   '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21']
         # self.model = CameraModel()
         # self.model.focal_length = [7.18856e+02, 7.18856e+02]
         # self.model.principal_point = [6.071928e+02, 1.852157e+02]
@@ -149,6 +149,8 @@ class DatasetLidarCameraKittiOdometry(Dataset):
         lidar_path = os.path.join(self.root_dir, 'sequences', seq, 'velodyne', rgb_name+'.bin')
         lidar_scan = np.fromfile(lidar_path, dtype=np.float32)
         pc = lidar_scan.reshape((-1, 4))
+
+        #defining the valid indices
         valid_indices = pc[:, 0] < -3.
         valid_indices = valid_indices | (pc[:, 0] > 3.)
         valid_indices = valid_indices | (pc[:, 1] < -3.)
@@ -231,9 +233,9 @@ class DatasetLidarCameraKittiOdometry(Dataset):
             transl_y = initial_RT[2]
             transl_z = initial_RT[3]
 
-        # 随机设置一定范围内的标定参数扰动值
-        # train的时候每次都随机生成,每个epoch使用不同的参数
-        # test则在初始化的时候提前设置好,每个epoch都使用相同的参数
+        # Randomly set the calibration parameter disturbance value within a certain range
+        # Train is randomly generated every time, and each epoch uses different parameters
+        # test is set in advance during initialization, and each epoch uses the same parameters
         R = mathutils.Euler((rotx, roty, rotz), 'XYZ')
         T = mathutils.Vector((transl_x, transl_y, transl_z))
 
@@ -469,9 +471,9 @@ class DatasetLidarCameraKittiRaw(Dataset):
             transl_y = initial_RT[2]
             transl_z = initial_RT[3]
 
-        # 随机设置一定范围内的标定参数扰动值
-        # train的时候每次都随机生成,每个epoch使用不同的参数
-        # test则在初始化的时候提前设置好,每个epoch都使用相同的参数
+        # Randomly set the calibration parameter disturbance value within a certain range
+        # Train is randomly generated every time, and each epoch uses different parameters
+        # test is set in advance during initialization, and each epoch uses the same parameters
         R = mathutils.Euler((rotx, roty, rotz), 'XYZ')
         T = mathutils.Vector((transl_x, transl_y, transl_z))
 

@@ -46,6 +46,8 @@ from math import radians
 from utils import invert_pose
 from torchvision import transforms
 
+from sacred import SETTINGS
+SETTINGS.CONFIG.READ_ONLY_CONFIG = False
 
 # import matplotlib
 # matplotlib.rc("font",family='AR PL UMing CN')
@@ -55,16 +57,17 @@ font_EN = {'family': 'Times New Roman', 'weight': 'normal', 'size': 16}
 font_CN = {'family': 'AR PL UMing CN', 'weight': 'normal', 'size': 16}
 plt_size = 10.5
 
-ex = Experiment("LCCNet-evaluate-iterative")
+ex = Experiment("LCCNet-evaluate-iterative", save_git_info=False)
 ex.captured_out_filter = apply_backspaces_and_linefeeds
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+base_path = '/home/abhishekkhoyani/LCCNet/Dataset/Custom'
 
 # noinspection PyUnusedLocal
 @ex.config
 def config():
     dataset = 'kitti/odom'
-    data_folder = '/home/wangshuo/Datasets/KITTI/odometry_color/'
+    data_folder = base_path #'/home/wangshuo/Datasets/KITTI/odometry_color/'
     test_sequence = 0
     use_prev_output = False
     max_t = 1.5
@@ -83,19 +86,19 @@ def config():
     save_log = False
     dropout = 0.0
     max_depth = 80.
-    iterative_method = 'multi_range' # ['multi_range', 'single_range', 'single']
-    output = '../output'
-    save_image = False
+    iterative_method = 'single' # ['multi_range', 'single_range', 'single']
+    output = os.path.join(base_path, 'output')
+    save_image = True
     outlier_filter = True
     outlier_filter_th = 10
     out_fig_lg = 'EN' # [EN, CN]
 
 weights = [
-   './pretrained/kitti_iter1.tar',
-   './pretrained/kitti_iter2.tar',
-   './pretrained/kitti_iter3.tar',
-   './pretrained/kitti_iter4.tar',
-   './pretrained/kitti_iter5.tar',
+   './pretrained/kitti_iter1.tar'
+#    './pretrained/kitti_iter2.tar',
+#    './pretrained/kitti_iter3.tar',
+#    './pretrained/kitti_iter4.tar',
+#    './pretrained/kitti_iter5.tar',
 ]
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -299,7 +302,7 @@ def main(_config, seed):
         outlier_filter = False
 
         if batch_idx == 0 or not _config['use_prev_output']:
-            # Qui dare posizione di input del frame corrente rispetto alla GT
+            # Here give input position of current frame relative to GT
             sample['tr_error'] = sample['tr_error'].cuda()
             sample['rot_error'] = sample['rot_error'].cuda()
         else:
@@ -310,7 +313,7 @@ def main(_config, seed):
             # ProjectPointCloud in RT-pose
             real_shape = [sample['rgb'][idx].shape[1], sample['rgb'][idx].shape[2], sample['rgb'][idx].shape[0]]
 
-            sample['point_cloud'][idx] = sample['point_cloud'][idx].cuda()  # 变换到相机坐标系下的激光雷达点云
+            sample['point_cloud'][idx] = sample['point_cloud'][idx].cuda()  # LiDAR point cloud transformed to camera coordinate system
             pc_lidar = sample['point_cloud'][idx].clone()
 
             if _config['max_depth'] < 80.:
@@ -531,9 +534,9 @@ def main(_config, seed):
         if _config['save_log']:
             log_file.writerow(log_string)
 
-    # Yaw（偏航）：欧拉角向量的y轴
-    # Pitch（俯仰）：欧拉角向量的x轴
-    # Roll（翻滚）： 欧拉角向量的z轴
+    # Yaw (yaw): the y-axis of the Euler angle vector
+    # Pitch (pitch): the x-axis of the Euler angle vector
+    # Roll: the z-axis of the Euler angle vector
     # mis_calib_input[transl_x, transl_y, transl_z, rotx, roty, rotz] Nx6
     mis_calib_input = torch.stack(mis_calib_list)[:, :, 0]
 
@@ -654,9 +657,9 @@ def main(_config, seed):
     plot_z = plot_z[np.lexsort(plot_z[:, ::-1].T)]
 
     N_interval = plot_x.shape[0] // N
-    plot_x = plot_x[::N_interval]
-    plot_y = plot_y[::N_interval]
-    plot_z = plot_z[::N_interval]
+    # plot_x = plot_x[::N_interval]
+    # plot_y = plot_y[::N_interval]
+    # plot_z = plot_z[::N_interval]
 
     plt.plot(plot_x[:, 0], plot_x[:, 1], c='red', label='X')
     plt.plot(plot_y[:, 0], plot_y[:, 1], c='blue', label='Y')
@@ -718,9 +721,9 @@ def main(_config, seed):
     plot_roll = plot_roll[np.lexsort(plot_roll[:, ::-1].T)]
 
     N_interval = plot_roll.shape[0] // N
-    plot_pitch = plot_pitch[::N_interval]
-    plot_yaw = plot_yaw[::N_interval]
-    plot_roll = plot_roll[::N_interval]
+    # plot_pitch = plot_pitch[::N_interval]
+    # plot_yaw = plot_yaw[::N_interval]
+    # plot_roll = plot_roll[::N_interval]
 
     # Yaw（偏航）：欧拉角向量的y轴
     # Pitch（俯仰）：欧拉角向量的x轴
